@@ -1,28 +1,38 @@
 from fastapi import APIRouter
 import os
+import re
 
 router = APIRouter()
 
 @router.get("/scan")
 def scan_project():
 
-    files = []
+    api_counts = {
+        "GET": 0,
+        "POST": 0,
+        "PUT": 0,
+        "DELETE": 0
+    }
 
-    project_files = {}
+    for root, dirs, files in os.walk("extracted"):
+        for file in files:
 
-    for root, dirs, filenames in os.walk("extracted"):
-        print(root)
+            if file.endswith(".py"):
 
-        for file in filenames:
-            files.append(os.path.join(root, file))
-            try:
-                with open(os.path.join(root, file), "r") as f:
-                  content = f.read()
-                project_files[file] = content
-            except:
-                pass
+                try:
+                    with open(os.path.join(root, file), "r", encoding="utf-8") as f:
+                        content = f.read()
+
+                        # 🔥 Improved patterns
+                        api_counts["GET"] += len(re.findall(r'\.get\(', content))
+                        api_counts["POST"] += len(re.findall(r'\.post\(', content))
+                        api_counts["PUT"] += len(re.findall(r'\.put\(', content))
+                        api_counts["DELETE"] += len(re.findall(r'\.delete\(', content))
+
+                except:
+                    pass
 
     return {
-    "files": files,
-    "project_files": project_files
-}
+        "total_apis": sum(api_counts.values()),
+        "breakdown": api_counts
+    }
